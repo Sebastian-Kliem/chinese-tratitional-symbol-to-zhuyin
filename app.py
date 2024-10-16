@@ -5,11 +5,11 @@ class ChineseSymbol:
     """
     Class for Chinese symbols
     """
-    _traditional_symbol: str = ""
-    _simplified_symbol: str = ""
-    _pinyin: str = ""
-    _english_translation: list[str] = []
-    _zhuyin: str = ""
+    traditional_symbol: str = ""
+    simplified_symbol: str = ""
+    pinyin: str = ""
+    english_translation: list[str] = []
+    zhuyin: str = ""
 
     def __init__(self,
                  traditional_symbol: str,
@@ -17,20 +17,20 @@ class ChineseSymbol:
                  pinyin: str,
                  english_translation: list[str],
                  ):
-        self._traditional_symbol: str = traditional_symbol
-        self._simplified_symbol: str = simplified_symbol
-        self._pinyin: str = pinyin
-        self._english_translation: list[str] = english_translation
+        self.traditional_symbol: str = traditional_symbol
+        self.simplified_symbol: str = simplified_symbol
+        self.pinyin: str = pinyin
+        self.english_translation: list[str] = english_translation
 
         self._get_zhuyin()
 
     def __str__(self):
         return f"""
-    traditional_symbol: {self._traditional_symbol}
-    simplified_symbol: {self._simplified_symbol}
-    pinyin: {self._pinyin}
-    english_translation: {self._english_translation}
-    zhuyin: {self._zhuyin}
+    traditional_symbol: {self.traditional_symbol}
+    simplified_symbol: {self.simplified_symbol}
+    pinyin: {self.pinyin}
+    english_translation: {self.english_translation}
+    zhuyin: {self.zhuyin}
             """
 
     def _get_zhuyin(self) -> None:
@@ -40,8 +40,8 @@ class ChineseSymbol:
         """
         try:
 
-            zhuyin: str = pinyin_to_zhuyin(self._pinyin)
-            self._zhuyin = zhuyin
+            zhuyin: str = pinyin_to_zhuyin(self.pinyin)
+            self.zhuyin = zhuyin
         except Exception as e:
             pass
 
@@ -103,23 +103,45 @@ def create_objects_from_src(src_lines: list[str],
     return objects
 
 
-def create_lookup_table_lines(symbols: list[ChineseSymbol]) -> list[str]:
+def create_lookup_table_lines(symbols: list[ChineseSymbol],
+                              zhuyin_seperated: bool = False,
+                              space_end: bool = False
+                              ) -> list[str]:
     """
     creates the lines for the look-up table
     :param symbols: list with symbol classes
+    :param zhuyin_seperated: if true, it creates a line with each zhuyin character e.g.:
+                AddToTable("ㄙ", "㒸");
+                AddToTable("ㄙㄨ", "㒸");
+                AddToTable("ㄙㄨㄟ", "㒸");
+    :param space_end: if true, at the end of zhuyin representation a space is added
     :return: list with lines for cpp-file
     """
     lines: list[str] = []
     for symbol in symbols:
-        zhuyin_symbols = [symbol for symbol in symbol._zhuyin]
 
-        for i in range(1, len(zhuyin_symbols) + 1):
-            combined_symbols = "".join(zhuyin_symbols[:i])
-            line = f'AddToTable("{combined_symbols}", "{symbol._traditional_symbol}");'
+        if symbol.zhuyin == "":
+            continue
+
+        if zhuyin_seperated:
+            zhuyin_symbols = [symbol for symbol in symbol.zhuyin]
+
+            for i in range(1, len(zhuyin_symbols) + 1):
+                combined_symbols = "".join(zhuyin_symbols[:i])
+                line = f'AddToTable("{combined_symbols}", "{symbol.traditional_symbol}");'
+                lines.append(line)
+                continue
+
+
+        if space_end:
+            line = f'AddToTable("{symbol.zhuyin} ", "{symbol.traditional_symbol}");'
             lines.append(line)
+            continue
+
+        line = f'AddToTable("{symbol.zhuyin}", "{symbol.traditional_symbol}");'
+        lines.append(line)
 
     return lines
-
 
 def split_list(list: list[any], splitting_size: int) -> list[list[any]]:
     """
@@ -148,7 +170,7 @@ def create_ccp_file(pobomofo_lines: list[str], filename: str):
     for item in split_bopomofo_lines:
         cpp_function: str = f"void TBoPoMoFoTraditionalChineseLookupTable::LoadLookupTable{counter}() " + "{ \n"
 
-        item_string = "\n".join(item)
+        item_string = " \n".join(item)
         cpp_function = cpp_function + item_string
         cpp_function = cpp_function + "\n} \n \n"
 
@@ -180,19 +202,22 @@ if __name__ == '__main__':
     source_lines = read_file_to_list('src/cedict_1_0_ts_utf-8_mdbg.txt')
 
     """
-    complete list of symbols    
+    complete list of symbols with phrases
     """
-    full_symbol_objects: list[ChineseSymbol] = create_objects_from_src(src_lines=source_lines,
-                                                                       complete=True
-                                                                       )
-    pobomofo_lines = create_lookup_table_lines(symbols=full_symbol_objects)
-    create_ccp_file(pobomofo_lines, "full_file")
+    # symbol_objects: list[ChineseSymbol] = create_objects_from_src(src_lines=source_lines,
+    #                                                                    complete=True
+    #                                                                    )
 
     """
-    list of symbols with one character    
+    list of symbols with one character (just words)    
     """
-    full_symbol_objects: list[ChineseSymbol] = create_objects_from_src(src_lines=source_lines,
-                                                                       complete=False
-                                                                       )
-    pobomofo_lines = create_lookup_table_lines(symbols=full_symbol_objects)
-    create_ccp_file(pobomofo_lines, "not_full_file")
+    symbol_objects: list[ChineseSymbol] = create_objects_from_src(src_lines=source_lines,
+                                                                  complete=False
+                                                                  )
+
+
+    pobomofo_lines = create_lookup_table_lines(symbols=symbol_objects,
+                                               zhuyin_seperated=False,
+                                               space_end=True
+                                               )
+    create_ccp_file(pobomofo_lines, "pobomofo_file.cpp")
