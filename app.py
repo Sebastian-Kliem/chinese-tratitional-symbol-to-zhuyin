@@ -220,4 +220,4 @@ if __name__ == '__main__':
                                                zhuyin_seperated=False,
                                                space_end=True
                                                )
-    create_ccp_file(pobomofo_lines, "pobomofo_file.cpp")
+    create_ccp_file(pobomofo_lines, "pobomofo_file")
