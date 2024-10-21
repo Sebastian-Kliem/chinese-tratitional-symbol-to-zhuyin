@@ -128,18 +128,24 @@ def create_lookup_table_lines(symbols: list[ChineseSymbol],
 
             for i in range(1, len(zhuyin_symbols) + 1):
                 combined_symbols = "".join(zhuyin_symbols[:i])
+
+                if space_end:
+                    line = f'AddToTable("{combined_symbols} ", "{symbol.traditional_symbol}");'
+                    lines.append(line)
+                    continue
+
                 line = f'AddToTable("{combined_symbols}", "{symbol.traditional_symbol}");'
                 lines.append(line)
                 continue
 
+        else:
+            if space_end:
+                line = f'AddToTable("{symbol.zhuyin} ", "{symbol.traditional_symbol}");'
+                lines.append(line)
+                continue
 
-        if space_end:
-            line = f'AddToTable("{symbol.zhuyin} ", "{symbol.traditional_symbol}");'
+            line = f'AddToTable("{symbol.zhuyin}", "{symbol.traditional_symbol}");'
             lines.append(line)
-            continue
-
-        line = f'AddToTable("{symbol.zhuyin}", "{symbol.traditional_symbol}");'
-        lines.append(line)
 
     return lines
 
@@ -217,7 +223,7 @@ if __name__ == '__main__':
 
 
     pobomofo_lines = create_lookup_table_lines(symbols=symbol_objects,
-                                               zhuyin_seperated=False,
+                                               zhuyin_seperated=True,
                                                space_end=True
                                                )
-    create_ccp_file(pobomofo_lines, "pobomofo_file")
+    create_ccp_file(pobomofo_lines, "pobomofo_file_seperated_chars")
